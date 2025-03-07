@@ -1,4 +1,4 @@
-import {CaretPosition, EditorFrameObjects, RootContainerFrameDefinition, ImportsContainerDefinition, FuncDefContainerDefinition, MainFramesContainerDefinition, getFrameDefType, AllFrameTypesIdentifier} from "@/types/types";
+import {CaretPosition, EditorFrameObjects, RootContainerFrameDefinition, ImportsContainerDefinition, FuncDefContainerDefinition, MainFramesContainerDefinition, getFrameDefType, AllFrameTypesIdentifier, TestDefContainerDefinition} from "@/types/types";
 
 const initialPythonState: EditorFrameObjects = {
     0: {
@@ -8,7 +8,7 @@ const initialPythonState: EditorFrameObjects = {
         isSelected: false,
         isVisible: true,
         parentId: 0,
-        childrenIds: [-1, -2, -3],
+        childrenIds: [-1, -2, -3, -4],
         jointParentId: 0,
         jointFrameIds: [],
         labelSlotsDict: { },
@@ -50,6 +50,20 @@ const initialPythonState: EditorFrameObjects = {
         isVisible: true,
         parentId: 0,
         childrenIds: [1,2],
+        jointParentId: 0,
+        jointFrameIds: [],
+        labelSlotsDict: {},
+        isCollapsed: false,
+        caretVisibility: CaretPosition.body,
+    },
+    "-4": {
+        id: -4,
+        frameType : TestDefContainerDefinition,
+        isDisabled: false,
+        isSelected: false,
+        isVisible: true,
+        parentId: 0,
+        childrenIds: [],
         jointParentId: 0,
         jointFrameIds: [],
         labelSlotsDict: {},

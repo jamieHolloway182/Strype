@@ -1,3 +1,4 @@
+import {MainFramesContainerDefinition, TestDefContainerDefinition } from "./../types/types";
 import Compiler from "@/compiler/compiler";
 import { actOnTurtleImport, hasEditorCodeErrors, trimmedKeywordOperators } from "@/helpers/editor";
 import { generateFlatSlotBases, retrieveSlotByPredicate } from "@/helpers/storeMethods";
@@ -214,10 +215,64 @@ export default class Parser {
         actOnTurtleImport();
 
         //console.time();
-        output += this.parseFrames((this.startAtFrameId > -100) ? [useStore().frameObjects[this.startAtFrameId]] : useStore().getFramesForParentId(0));
+        
+        //remove test code so this does not intefere with main code execution
+        let frames = useStore().getFramesForParentId(0);
+        frames = frames.filter((frame) => frame.frameType.type != TestDefContainerDefinition.type);
+        output += this.parseFrames((this.startAtFrameId > -100) ? [useStore().frameObjects[this.startAtFrameId]] : frames);
+        
         // We could have disabled frame(s) just at the end of the code. 
         // Since no further frame would be used in the parse to close the ongoing comment block we need to check
         // if there are disabled frames being rendered when reaching the end of the editor's code.
+        let disabledFrameBlockFlag = "";
+        if(this.isDisabledFramesTriggered) {
+            this.isDisabledFramesTriggered = !this.isDisabledFramesTriggered;
+            disabledFrameBlockFlag = this.disabledBlockIndent + DISABLEDFRAMES_FLAG ;
+        }
+        //console.timeEnd();
+        return output + disabledFrameBlockFlag;
+    }
+
+    public parseTests(tests: string[]): string {
+        let output = "";
+    
+        if (tests.length > 0) {
+            // Retrieve frames and filter out irrelevant ones
+            let frames = useStore().getFramesForParentId(0);
+            const firstFrames = frames.slice().filter((frame) => 
+                frame.frameType.type != MainFramesContainerDefinition.type && 
+                frame.frameType.type != TestDefContainerDefinition.type);
+    
+            output += this.parseFrames((this.startAtFrameId > -100) ?[useStore().frameObjects[this.startAtFrameId]] : firstFrames);
+    
+            output += "import unittest\nclass TestFunc(unittest.TestCase):\n\t";
+    
+            frames = frames.filter((frame) => frame.frameType.type == TestDefContainerDefinition.type);
+    
+            const testDefinitions = this.parseFrames(frames).trim().split(/(?=def )/);
+            console.log(testDefinitions);
+    
+            for (const test of testDefinitions) {
+                const functionName = test.match(/def\s+([a-zA-Z0-9_]+)/)?.[1];
+                if (functionName && tests.includes(functionName)) {
+                    output += test.replace(/\n/g, "\n\t");
+                }
+            }
+
+            output += "\nunittest.main(verbosity=3)";
+        }
+    
+        return output;
+    }
+
+    public parseTestsOnly(): string{
+        let output = "";
+
+        //remove main code container so errors here do not interfere with the tests
+        let frames = useStore().getFramesForParentId(0);
+        frames = frames.filter((frame) => frame.frameType.type == TestDefContainerDefinition.type);
+        output += this.parseFrames((this.startAtFrameId > -100) ? [useStore().frameObjects[this.startAtFrameId]] : frames);
+
         let disabledFrameBlockFlag = "";
         if(this.isDisabledFramesTriggered) {
             this.isDisabledFramesTriggered = !this.isDisabledFramesTriggered;
@@ -429,6 +484,10 @@ export default class Parser {
 
     public getFullCode(): string {
         return this.parse(undefined, undefined, false);
+    }
+
+    public getFullTestCode(tests: string[]): string {
+        return this.parseTests(tests);
     }
 
     private checkIfFrameHasError(frame: FrameObject): boolean {

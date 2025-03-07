@@ -301,6 +301,7 @@ export const ContainerTypesIdentifiers = {
     importsContainer: "importsContainer",
     funcDefsContainer: "funcDefsContainer",
     framesMainContainer: "mainContainer",
+    testDefsContainer: "testDefsContainer",
 };
 
 const CommentFrameTypesIdentifier = {
@@ -314,6 +315,10 @@ const ImportFrameTypesIdentifiers = {
 
 const FuncDefIdentifiers = {
     funcdef: "funcdef",
+};
+
+const TestDefIdentifiers = {
+    testdef: "testdef",
 };
 
 export const JointFrameIdentifiers = {
@@ -338,6 +343,7 @@ const StandardFrameTypesIdentifiers = {
     return: "return",
     varassign: "varassign",
     global: "global",
+    assert: "assert",
     ...JointFrameIdentifiers,
 };
 
@@ -345,6 +351,7 @@ export const AllFrameTypesIdentifier = {
     ...ImportFrameTypesIdentifiers,
     ...FuncDefIdentifiers,
     ...StandardFrameTypesIdentifiers,
+    ...TestDefIdentifiers,
 };
 
 export const DefaultFramesDefinition: FramesDefinitions = {
@@ -422,12 +429,24 @@ export const MainFramesContainerDefinition: FramesDefinitions = {
     colour: "#BBC6B6",
 };
 
+export const TestDefContainerDefinition: FramesDefinitions = {
+    ...BlockDefinition,
+    type: ContainerTypesIdentifiers.testDefsContainer,
+    labels: [
+        { label: (i18n.t("appMessage.testDefsContainer") as string), showSlots: false, defaultText: ""},
+    ],
+    isCollapsed: false,
+    forbiddenChildrenTypes: Object.values(AllFrameTypesIdentifier)
+        .filter((frameTypeDef: string) => !Object.values(TestDefIdentifiers).includes(frameTypeDef) && frameTypeDef !== CommentFrameTypesIdentifier.comment),
+    colour: "#BBC6B6",
+};
 
 export const FrameContainersDefinitions = {
     RootContainerFrameDefinition,
     ImportsContainerDefinition,
     FuncDefContainerDefinition,
     MainFramesContainerDefinition,
+    TestDefContainerDefinition,
 };
 
 let Definitions = {};
@@ -449,6 +468,7 @@ export function generateAllFrameDefinitionTypes(regenerateExistingFrames?: boole
         innerJointDraggableGroup: DraggableGroupTypes.ifCompound,
         forbiddenChildrenTypes: Object.values(ImportFrameTypesIdentifiers)
             .concat(Object.values(FuncDefIdentifiers))
+            .concat(Object.values(TestDefIdentifiers))
             .concat([ StandardFrameTypesIdentifiers.except, StandardFrameTypesIdentifiers.finally]),
     };
 
@@ -540,6 +560,29 @@ export function generateAllFrameDefinitionTypes(regenerateExistingFrames?: boole
         ],
         colour: "#ECECC8",
         draggableGroup: DraggableGroupTypes.functionSignatures,
+    };
+
+    const TestDefDefinition: FramesDefinitions = {
+        ...BlockDefinition,
+        type: TestDefIdentifiers.testdef,
+        labels: [
+            { label: "def test_", defaultText: i18n.t("frame.defaultText.name") as string},
+            { label: "(self):", defaultText: "", showSlots:false},
+        ],
+        colour: "#ECECC8",
+        draggableGroup: DraggableGroupTypes.none,
+    };
+
+    const AssertDefinition: FramesDefinitions = {
+        ...BlockDefinition,
+        allowChildren: false,
+        type: StandardFrameTypesIdentifiers.assert,
+        labels: [
+            { label: "assert ", defaultText: i18n.t("frame.defaultText.expression") as string},
+            { label: "== ", defaultText: i18n.t("frame.defaultText.expression") as string},
+        ],
+        colour: scssVars.mainCodeContainerBackground,
+        draggableGroup: DraggableGroupTypes.none,
     };
 
     const WithDefinition: FramesDefinitions = {
@@ -669,6 +712,8 @@ export function generateAllFrameDefinitionTypes(regenerateExistingFrames?: boole
         ExceptDefinition,
         FinallyDefinition,
         FuncDefDefinition,
+        TestDefDefinition,
+        AssertDefinition,
         WithDefinition,
         FuncCallDefinition,
         BlankDefinition,
@@ -1059,6 +1104,12 @@ export enum StrypePlatform {
 
 // This enum represents the different possible states the user code Python execution can take
 export enum PythonExecRunningState {
+    NotRunning,
+    Running,
+    RunningAwaitingStop,
+}
+
+export enum PythonExecRunningTestState {
     NotRunning,
     Running,
     RunningAwaitingStop,

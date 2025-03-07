@@ -112,7 +112,7 @@ export default Vue.extend({
             };
             // For the main code, add 200px at the bottom so you can scroll down to put the last bit of code
             // above the bottom of the window.
-            if (this.frameId == -3) {
+            if (this.frameId == -4) {
                 defaultStyle["padding-bottom"] = "200px";
             }
             return defaultStyle;
@@ -143,7 +143,8 @@ export default Vue.extend({
         containerStyle(): Record<string, string> {
             return {
                 "display": (this.isCollapsed) ? "none" : "block",
-                "backgroundColor": `${(this.frameType.type === FrameContainersDefinitions.ImportsContainerDefinition.type || this.frameType.type == FrameContainersDefinitions.FuncDefContainerDefinition.type) 
+                "backgroundColor": `${(this.frameType.type === FrameContainersDefinitions.ImportsContainerDefinition.type || this.frameType.type == FrameContainersDefinitions.FuncDefContainerDefinition.type
+                || this.frameType.type == FrameContainersDefinitions.TestDefContainerDefinition.type) 
                     ? getFrameDefType(AllFrameTypesIdentifier.import).colour
                     : getFrameDefType(AllFrameTypesIdentifier.return).colour}`,
             };

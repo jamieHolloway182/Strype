@@ -1,4 +1,4 @@
-import {CaretPosition, EditorFrameObjects, RootContainerFrameDefinition, ImportsContainerDefinition, FuncDefContainerDefinition, MainFramesContainerDefinition, getFrameDefType, AllFrameTypesIdentifier} from "@/types/types";
+import {CaretPosition, EditorFrameObjects, RootContainerFrameDefinition, ImportsContainerDefinition, FuncDefContainerDefinition, MainFramesContainerDefinition, TestDefContainerDefinition, getFrameDefType, AllFrameTypesIdentifier} from "@/types/types";
 
 const initialMicrobitState: EditorFrameObjects = {
     0: {
@@ -56,6 +56,21 @@ const initialMicrobitState: EditorFrameObjects = {
         isCollapsed: false,
         caretVisibility: CaretPosition.body,
     },
+    "-4": {
+        id: -4,
+        frameType : TestDefContainerDefinition,
+        isDisabled: false,
+        isSelected: false,
+        isVisible: true,
+        parentId: 0,
+        childrenIds: [],
+        jointParentId: 0,
+        jointFrameIds: [],
+        labelSlotsDict: {},
+        isCollapsed: false,
+        caretVisibility: CaretPosition.body,
+    },
+
     1: {
         frameType: getFrameDefType(AllFrameTypesIdentifier.fromimport),
         id: 1,

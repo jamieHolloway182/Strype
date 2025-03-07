@@ -717,6 +717,20 @@ export const isContainedInFrame = function (currFrameId: number, caretPosition: 
     return isAncestorTypeFound;
 };
 
+// This method returns a boolean value indicating whether the frame is contained
+// within one of the frame types specified in "containerTypes"
+export const isContainedInFrameType = function (currFrameId: number, containerTypes: string[]): boolean {
+    let isAncestorTypeFound = false;
+    let frameToCheckId = getParent(useStore().frameObjects[currFrameId]);
+    
+    while(frameToCheckId != 0 && !isAncestorTypeFound){
+        isAncestorTypeFound = containerTypes.includes(useStore().frameObjects[frameToCheckId].frameType.type);
+        frameToCheckId = getParent(useStore().frameObjects[frameToCheckId]);
+    }
+
+    return isAncestorTypeFound;
+};
+
 // Instead of calculating the available caret positions through the store (where the frameObjects object is hard to use for this)
 // We get the available caret positions through the DOM, where they are all present.
 export const getAvailableNavigationPositions = function(): NavigationPosition[] {

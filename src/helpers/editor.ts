@@ -662,18 +662,38 @@ export function generateAllFrameCommandsDefs():void {
             tooltip:i18n.t("frame.comment_detail") as string,
             shortcuts: ["c", "#"],
         }],
-        "t": [{
-            type: getFrameDefType(AllFrameTypesIdentifier.try),
-            description: "try",
-            tooltip:i18n.t("frame.try_detail") as string,
-            shortcuts: ["t"],
-        }],
-        "a" : [{
-            type: getFrameDefType(AllFrameTypesIdentifier.raise),
-            description: "raise",
-            tooltip:i18n.t("frame.raise_detail") as string,
-            shortcuts: ["a"],
-        }],
+        "t": [
+            {
+                type: getFrameDefType(AllFrameTypesIdentifier.try),
+                description: "try",
+                tooltip:i18n.t("frame.try_detail") as string,
+                shortcuts: ["t"],
+                index: 0,
+            },
+            {
+                type: getFrameDefType(AllFrameTypesIdentifier.testdef),
+                description: "test definition",
+                tooltip: i18n.t("frame.testdef_detail") as string,
+                shortcuts: ["t"],
+                index:1,
+            },
+        ],
+        "a" : [
+            {
+                type: getFrameDefType(AllFrameTypesIdentifier.assert),
+                description: "assert",
+                tooltip: i18n.t("frame.assert_detail") as string,
+                shortcuts: ["a"],
+                index: 0,
+            },
+            {
+                type: getFrameDefType(AllFrameTypesIdentifier.raise),
+                description: "raise",
+                tooltip:i18n.t("frame.raise_detail") as string,
+                shortcuts: ["a"],
+                index: 1,
+            },
+        ],
         "x": [{
             type: getFrameDefType(AllFrameTypesIdentifier.except),
             description: "except",

@@ -394,6 +394,7 @@ export default Vue.extend({
     mounted() {
         // Check the local storage (WebStorage) to see if there is a saved project from the previous time the user entered the system
         // if browser supports localstorage
+
         if (typeof(Storage) !== "undefined") {
             const savedState = localStorage.getItem(this.localStorageAutosaveKey);
             if(savedState) {

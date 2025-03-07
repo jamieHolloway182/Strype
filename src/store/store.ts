@@ -1,5 +1,5 @@
 import Vue from "vue";
-import { FrameObject, CurrentFrame, CaretPosition, MessageDefinitions, ObjectPropertyDiff, AddFrameCommandDef, EditorFrameObjects, MainFramesContainerDefinition, FuncDefContainerDefinition, EditableSlotReachInfos, StateAppObject, UserDefinedElement, ImportsContainerDefinition, EditableFocusPayload, SlotInfos, FramesDefinitions, EmptyFrameObject, NavigationPosition, FormattedMessage, FormattedMessageArgKeyValuePlaceholders, generateAllFrameDefinitionTypes, AllFrameTypesIdentifier, BaseSlot, SlotType, SlotCoreInfos, SlotsStructure, LabelSlotsContent, FieldSlot, SlotCursorInfos, StringSlot, areSlotCoreInfosEqual, StrypeSyncTarget, ProjectLocation, MessageDefinition, PythonExecRunningState, AddShorthandFrameCommandDef, isFieldBaseSlot } from "@/types/types";
+import { FrameObject, CurrentFrame, CaretPosition, MessageDefinitions, ObjectPropertyDiff, AddFrameCommandDef, EditorFrameObjects, MainFramesContainerDefinition, FuncDefContainerDefinition, EditableSlotReachInfos, StateAppObject, UserDefinedElement, ImportsContainerDefinition, EditableFocusPayload, SlotInfos, FramesDefinitions, EmptyFrameObject, NavigationPosition, FormattedMessage, FormattedMessageArgKeyValuePlaceholders, generateAllFrameDefinitionTypes, AllFrameTypesIdentifier, BaseSlot, SlotType, SlotCoreInfos, SlotsStructure, LabelSlotsContent, FieldSlot, SlotCursorInfos, StringSlot, areSlotCoreInfosEqual, StrypeSyncTarget, ProjectLocation, MessageDefinition, PythonExecRunningState, PythonExecRunningTestState, AddShorthandFrameCommandDef, isFieldBaseSlot, TestDefContainerDefinition } from "@/types/types";
 import { getObjectPropertiesDifferences, getSHA1HashForObject } from "@/helpers/common";
 import i18n from "@/i18n";
 import { checkCodeErrors, checkStateDataIntegrity, cloneFrameAndChildren, countRecursiveChildren, evaluateSlotType, generateFlatSlotBases, getAllChildrenAndJointFramesIds, getAvailableNavigationPositions, getDisabledBlockRootFrameId, getFlatNeighbourFieldSlotInfos, getParentOrJointParent, getSlotIdFromParentIdAndIndexSplit, getSlotParentIdAndIndexSplit, isContainedInFrame, isFramePartOfJointStructure, removeFrameInFrameList, restoreSavedStateFrameTypes, retrieveSlotByPredicate, retrieveSlotFromSlotInfos } from "@/helpers/storeMethods";
@@ -18,6 +18,7 @@ import { nextTick } from "@vue/composition-api";
 let initialState: StateAppObject = initialStates["initialPythonState"];
 /* IFTRUE_isMicrobit */
 initialState = initialStates["initialMicrobitState"];
+
 /* FITRUE_isMicrobit */
 
 // These are deliberately held outside the store because:
@@ -76,6 +77,7 @@ export const useStore = defineStore("app", {
             // This flag indicates if the user code is being executed in the Python Execution Area
             pythonExecRunningState: PythonExecRunningState.NotRunning,
 
+            pythonExecRunningTestState: PythonExecRunningTestState.NotRunning,
 
             // This flag can be used anywhere a key event should be ignored within the application
             ignoreKeyEvent: false,
@@ -161,6 +163,7 @@ export const useStore = defineStore("app", {
             DAPWrapper: {} as DAPWrapper,
 
             previousDAPWrapper: {} as DAPWrapper,
+            ztest:["hey"],
         };
     },
 
@@ -218,6 +221,7 @@ export const useStore = defineStore("app", {
         },
         
         getCurrentFrameObject: (state) => {
+            console.log(state.frameObjects, state.currentFrame);
             return state.frameObjects[state.currentFrame.id];
         },
         
@@ -395,9 +399,20 @@ export const useStore = defineStore("app", {
                     ...[AllFrameTypesIdentifier.return, AllFrameTypesIdentifier.global]
                 );
             }
+
+            const canShowAssertStatement = isContainedInFrame(frameId, caretPosition, [TestDefContainerDefinition.type]);
+            if(!canShowAssertStatement){
+                forbiddenTypes.splice(
+                    0,
+                    0,
+                    ...[AllFrameTypesIdentifier.assert]
+                );
+            }
+
             const addCommandsDefs = getAddCommandsDefs();
             const filteredCommands: {[id: string]: AddFrameCommandDef[]} = JSON.parse(JSON.stringify(addCommandsDefs));
             const allowedJointCommand: {[id: string]: AddFrameCommandDef[]} = {};
+
 
             // for each shortcut we get a list of the corresponding commands
             for (const frameShortcut in addCommandsDefs) {
@@ -422,7 +437,6 @@ export const useStore = defineStore("app", {
                     );                    
                 }
             }
-            
             return filteredCommands;
         },
         
@@ -1926,7 +1940,9 @@ export const useStore = defineStore("app", {
             //If a selection is deleted, we don't distinguish between "del" and "backspace": 
             //We move the caret at the last element of the selection, and perform "backspace" for each element of the selection
             if(this.selectedFrames.length > 0){
+                console.log("gay");
                 if(this.selectedFrames[this.selectedFrames.length-1] !== this.currentFrame.id){
+                    console.log(this.selectedFrames, "hey");
                     this.setCurrentFrame(
                         {
                             id: this.selectedFrames[this.selectedFrames.length-1], 
@@ -1999,6 +2015,7 @@ export const useStore = defineStore("app", {
                             // there's actually no need to change the cursor position, because we should still be below
                             // the joint frame's parent:
                             if (!currentFrame.frameType.isJointFrame || this.currentFrame.caretPosition != CaretPosition.below) {
+                                console.log("yo bbabezz");
                                 const prevFramePos = availablePositions[availablePositions.findIndex((e) => e.frameId === currentFrame.id) - 1];
                                 const newCurrent = (prevFramePos) ? {id: prevFramePos.frameId, caretPosition: prevFramePos.caretPosition} as CurrentFrame : this.currentFrame;
                                 this.setCurrentFrame({id: newCurrent.id, caretPosition: newCurrent.caretPosition});
@@ -2024,6 +2041,7 @@ export const useStore = defineStore("app", {
                         }
                     );
                 }  
+                console.log(this.currentFrame.id, this.frameObjects);
             });
 
             //clear the selection of frames

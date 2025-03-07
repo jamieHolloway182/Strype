@@ -81,11 +81,11 @@ export default Vue.extend({
         },
 
         isStaticCaretContainer(): boolean {
-            // Function definition frames are spaced, so we keep the caret container static (with the caret height) 
+            // Function and Test definition frames are spaced, so we keep the caret container static (with the caret height) 
             // for such frames (meaning if there are more than 1 frame, all but last caret container should be static)
             const frameType = this.appStore.frameObjects[this.frameId].frameType.type;
             const parentFrame = this.appStore.frameObjects[this.appStore.frameObjects[this.frameId].parentId];
-            return (frameType == AllFrameTypesIdentifier.funcdef && this.caretAssignedPosition == CaretPosition.below &&
+            return ((frameType == AllFrameTypesIdentifier.funcdef || frameType == AllFrameTypesIdentifier.testdef) && this.caretAssignedPosition == CaretPosition.below &&
              parentFrame.childrenIds.length > 1 && parentFrame.childrenIds.at(-1) != this.frameId);
         },
 

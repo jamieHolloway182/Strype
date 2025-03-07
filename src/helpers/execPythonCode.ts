@@ -234,11 +234,11 @@ export function execPythonCode(aConsoleTextArea: HTMLTextAreaElement, aTurtleDiv
             }
         }
             
-        
         let frameId = -1;        
         if (errorLine > 0) { 
             // Skulpt starts indexing at 1, we use 0 for TigerPython, so we need to offset the line number
             const locatableError = lineFrameMapping[errorLine - 1] !== undefined;
+            console.log(skulptErrStr, lineFrameMapping);
             
             // We assume that if we cannot find a frame assiocated with an error, it must be a Python line that shows as extra 
             // when the user code generates non well formated code --> e.g. adding an empty method call frame within an if frame
@@ -270,4 +270,60 @@ export function execPythonCode(aConsoleTextArea: HTMLTextAreaElement, aTurtleDiv
             consoleTextArea.scrollTop = consoleTextArea.scrollHeight;
         });
     });
+}
+
+export function execPythonCodeLine(pythonCode: string): void {
+    // Create a persistent global environment to store variables
+    
+    // Set up a log to record the execution flow
+    const executionLog: { lineNumber: number, output: string }[] = [];
+
+    pythonCode = addPrintStatements(pythonCode);
+    console.log(pythonCode);
+
+    // Override Skulpt's output function to capture printed output
+    Sk.configure({
+        output: function (msg: string) {
+            const currentLine = executionLog.length ? executionLog[executionLog.length - 1].lineNumber : 0;
+            // Capture output with line number
+            executionLog.push({ lineNumber: currentLine, output: msg });
+        },
+        read: function (x: string) {
+            return Sk.builtinFiles["files"][x]; // Read files for the environment
+        },
+    });
+
+
+    // Function to execute the whole code and track line-by-line
+    function executeCode() {
+        Sk.misceval.asyncToPromise(function () {
+            return Sk.importMainWithBody("<stdin>", false, pythonCode, true);
+        }).then(function () {
+            console.log("Program executed successfully.");
+            console.log("Execution Log:", executionLog);
+        }).catch(function (err: any) {
+            console.error("Error executing code:", err);
+        });
+    }
+
+    // Start the execution of the code
+    executeCode();
+    console.log(executionLog);
+}
+
+function addPrintStatements(pythonCode: string): string {
+    const lines = pythonCode.split("\n");
+
+    const wrappedCode = lines.map((line, index) => {
+        const match = line.match(/^\t*/); 
+        const numTabs = match ? match[0].length : 0; 
+
+        const endsWithColon = line.trim().endsWith(":");
+
+        const tabsToAdd = endsWithColon ? numTabs + 1 : numTabs;
+
+        return `${line}\n${"\t".repeat(tabsToAdd)}print("Executed line ${index + 1}")`;
+    }).join("\n");
+
+    return wrappedCode;
 }

@@ -28,8 +28,13 @@ Vue.use(vBlur);
 
 // Use a Pinia store (instead of Vuex store, because it handles type inferrence better)
 Vue.use(PiniaVuePlugin);
+
 const pinia = createPinia();
-Vue.config.productionTip = false;
+
+// Reset the entire store at app start
+localStorage.clear();
+sessionStorage.clear();
+pinia.state.value = {}; 
 
 export const vm = new Vue({
     pinia,
@@ -37,3 +42,4 @@ export const vm = new Vue({
     render: (h) => h(App),
 });
 vm.$mount("#app");
+

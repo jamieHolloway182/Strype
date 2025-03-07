@@ -35,7 +35,8 @@ export enum STRYPE_LOCATION {
     MAIN_CODE_SECTION,
     IN_FUNCDEF,
     FUNCDEF_SECTION,
-    IMPORTS_SECTION
+    IMPORTS_SECTION,
+    TESTDEF_SECTION
 }
 
 // Simplifies a tree (by collapsing all single-child nodes into the child) in order to make
