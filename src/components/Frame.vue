@@ -1,71 +1,87 @@
 <template>
     <div 
         v-show="isVisible"
-        :class="frameSelectedCssClass"
+        :class="[frameSelectedCssClass]"
     >
         <!-- keep both mousedown & click events: we need mousedown to manage the caret rendering during drag & drop -->
         <!-- keep the tabIndex attribute, it is necessary to handle focus with Safari -->
-        <div 
-            :style="frameStyle" 
-            :class="{frameDiv: true, blockFrameDiv: isBlockFrame && !isJointFrame, statementFrameDiv: !isBlockFrame && !isJointFrame}"
-            :id="UID"
-            @click="toggleCaret($event)"
-            @contextmenu="handleClick($event)"
-            tabindex="-1"
-            draggable="true"
-            @dragstart.self="handleFrameDragStart"
+        <div
+            :class="borderClass"
         >
-            <!-- Make sure the click events are stopped in the links because otherwise, events pass through and mess the toggle of the caret in the editor.
-                Also, the element MUST have the hover event handled for proper styling (we want hovering and selecting to go together) -->
-            <vue-context :id="getFrameContextMenuUID" ref="menu" v-show="allowContextMenu" @open="handleContextMenuOpened" @close="handleContextMenuClosed">
-                <li v-for="menuItem, index in frameContextMenuItems" :key="`frameContextMenuItem_${frameId}_${index}`" :action-name="menuItem.actionName">
-                    <hr v-if="menuItem.type === 'divider'" />
-                    <a v-else @click.stop="menuItem.method();closeContextMenu();" @mouseover="handleContextMenuHover">{{menuItem.name}}</a>
-                </li>
-            </vue-context>
-
-            <FrameHeader
-                v-if="frameType.labels !== null"
-                :id="frameHeaderId"
-                :isDisabled="isDisabled"
-                v-blur="isDisabled || isBeingDraggedComputed"
-                :frameId="frameId"
-                :frameType="frameType.type"
-                :labels="frameType.labels"
-                :class="{'frame-header': true, error: hasRuntimeError}"
-                :style="frameMarginStyle['header']"
-                :frameAllowChildren="allowChildren"
-                :erroneous="hasRuntimeError"
-                :wasLastRuntimeError="wasLastRuntimeError"
-            />
-            <b-popover
-                v-if="hasRuntimeError || wasLastRuntimeError"
-                ref="errorPopover"
-                :target="frameHeaderId"
-                :title="$t((hasRuntimeError) ? 'PEA.runtimeErrorConsole' : 'errorMessage.pastFrameErrTitle')"
-                triggers="hover"
-                :content="(hasRuntimeError) ? runTimeErrorMessage : runtimeErrorAtLastRunMsg"
-                :custom-class="(hasRuntimeError) ? 'error-popover modified-title-popover': 'error-popover'"
-                placement="left"
+            <div 
+                :style="frameStyle" 
+                :class="{frameDiv: true, blockFrameDiv: isBlockFrame && !isJointFrame, statementFrameDiv: !isBlockFrame && !isJointFrame}"
+                :id="UID"
+                @click="toggleCaret($event)"
+                @contextmenu="handleClick($event)"
+                tabindex="-1"
+                draggable="true"
+                @dragstart.self="handleFrameDragStart"
             >
-            </b-popover>
-            <FrameBody
-                v-if="allowChildren"
-                :ref="getFrameBodyRef"
-                :frameId="frameId"
-                :isDisabled="isDisabled"
-                :isBeingDragged="isBeingDraggedComputed"
-                :caretVisibility="caretVisibility"
-                :style="frameMarginStyle['body']"
-            />
-            <JointFrames 
-                v-if="allowsJointChildren"
-                :ref="getJointFramesRef"
-                :jointParentId="frameId"
-                :isDisabled="isDisabled"
-                :isBeingDragged="isBeingDraggedComputed"
-                :isParentSelected="isPartOfSelection"
-            />
+                <!-- Make sure the click events are stopped in the links because otherwise, events pass through and mess the toggle of the caret in the editor.
+                    Also, the element MUST have the hover event handled for proper styling (we want hovering and selecting to go together) -->
+                <vue-context :id="getFrameContextMenuUID" ref="menu" v-show="allowContextMenu" @open="handleContextMenuOpened" @close="handleContextMenuClosed">
+                    <li v-for="menuItem, index in frameContextMenuItems" :key="`frameContextMenuItem_${frameId}_${index}`" :action-name="menuItem.actionName">
+                        <hr v-if="menuItem.type === 'divider'" />
+                        <a v-else @click.stop="menuItem.method();closeContextMenu();" @mouseover="handleContextMenuHover">{{menuItem.name}}</a>
+                    </li>
+                </vue-context>
+
+                <FrameHeader
+                    v-if="frameType.labels !== null"
+                    :id="frameHeaderId"
+                    :isDisabled="isDisabled"
+                    v-blur="isDisabled || isBeingDraggedComputed"
+                    :frameId="frameId"
+                    :frameType="frameType.type"
+                    :labels="frameType.labels"
+                    :class="{'frame-header': true, error: hasRuntimeError}"
+                    :style="frameMarginStyle['header']"
+                    :frameAllowChildren="allowChildren"
+                    :erroneous="hasRuntimeError"
+                    :wasLastRuntimeError="wasLastRuntimeError"
+                />
+                <b-popover
+                    v-if="hasRuntimeError || wasLastRuntimeError"
+                    ref="errorPopover"
+                    :target="frameHeaderId"
+                    :title="$t((hasRuntimeError) ? 'PEA.runtimeErrorConsole' : 'errorMessage.pastFrameErrTitle')"
+                    triggers="hover"
+                    :content="(hasRuntimeError) ? runTimeErrorMessage : runtimeErrorAtLastRunMsg"
+                    :custom-class="(hasRuntimeError) ? 'error-popover modified-title-popover': 'error-popover'"
+                    placement="left"
+                >
+                </b-popover>
+
+                <b-popover
+                    v-if="isErroneousTest"
+                    ref="errorPopover"
+                    :title="$t('PEA.runtimeErrorConsole')"
+                    :target="UID"
+                    :content="getTestError"
+                    triggers="hover"
+                    custom-class="error-popover modified-title-popover"
+                    placement="left"
+                >
+                </b-popover>
+                <FrameBody
+                    v-if="allowChildren"
+                    :ref="getFrameBodyRef"
+                    :frameId="frameId"
+                    :isDisabled="isDisabled"
+                    :isBeingDragged="isBeingDraggedComputed"
+                    :caretVisibility="caretVisibility"
+                    :style="frameMarginStyle['body']"
+                />
+                <JointFrames 
+                    v-if="allowsJointChildren"
+                    :ref="getJointFramesRef"
+                    :jointParentId="frameId"
+                    :isDisabled="isDisabled"
+                    :isBeingDragged="isBeingDraggedComputed"
+                    :isParentSelected="isPartOfSelection"
+                />
+            </div>
         </div>
         <div>
             <CaretContainer
@@ -88,9 +104,9 @@ import Vue from "vue";
 import FrameHeader from "@/components/FrameHeader.vue";
 import CaretContainer from "@/components/CaretContainer.vue";
 import { useStore } from "@/store/store";
-import { DefaultFramesDefinition, CaretPosition, CurrentFrame, NavigationPosition, AllFrameTypesIdentifier, Position, PythonExecRunningState, FrameContextMenuActionName } from "@/types/types";
+import { BaseSlot, DefaultFramesDefinition, CaretPosition, CurrentFrame, NavigationPosition, AllFrameTypesIdentifier, Position, PythonExecRunningState, FrameContextMenuActionName} from "@/types/types";
 import VueContext, {VueContextConstructor}  from "vue-context";
-import { getAboveFrameCaretPosition, getAllChildrenAndJointFramesIds, getLastSibling, getParent, getParentOrJointParent, isFramePartOfJointStructure, isLastInParent } from "@/helpers/storeMethods";
+import { getAboveFrameCaretPosition, getAllChildrenAndJointFramesIds, getFrameSectionIdFromFrameId, getLastSibling, getParent, getParentOrJointParent, isFramePartOfJointStructure, isLastInParent } from "@/helpers/storeMethods";
 import { CustomEventTypes, getFrameBodyUID, getFrameContextMenuUID, getFrameHeaderUID, getFrameUID, isIdAFrameId, getFrameBodyRef, getJointFramesRef, getCaretContainerRef, setContextMenuEventClientXY, adjustContextMenuPosition, getActiveContextMenu, notifyDragStarted, getCaretUID, getHTML2CanvasFramesSelectionCropOptions } from "@/helpers/editor";
 import { mapStores } from "pinia";
 import { BPopover } from "bootstrap-vue";
@@ -155,6 +171,44 @@ export default Vue.extend({
 
     computed: {
         ...mapStores(useStore),
+
+        borderClass(): string{
+            if (getFrameSectionIdFromFrameId(this.frameId) == -4 && this.frameType.type == "testdef"){
+                const frame = useStore().frameObjects[this.frameId];
+                const testName = "test_" + (frame.labelSlotsDict[0].slotStructures.fields[0] as BaseSlot).code;
+                if (useStore().failedTests[testName]!= undefined){
+                    return "red-border";
+                }
+                else{
+                    return "green-border";
+                }
+            }
+            return "no-border";
+        },
+
+        isTestDefFrame() : boolean{
+            return getFrameSectionIdFromFrameId(this.frameId) == -4 && this.frameType.type == "testdef";
+        },
+
+        isErroneousTest() : boolean{
+            if(getFrameSectionIdFromFrameId(this.frameId) == -4 && this.frameType.type == "testdef"){
+                const frame = useStore().frameObjects[this.frameId];
+                const testName = "test_" + (frame.labelSlotsDict[0].slotStructures.fields[0] as BaseSlot).code;
+                return useStore().failedTests[testName]!= undefined;
+            }
+            return false;
+        },
+
+        getTestError() : string{
+            const frame = useStore().frameObjects[this.frameId];
+            const testName = "test_" + (frame.labelSlotsDict[0].slotStructures.fields[0] as BaseSlot).code;
+            console.log(frame, testName, useStore().failedTests[testName]);
+            const errorMessage = useStore().failedTests[testName]?? "";
+            if (errorMessage == ""){
+                return "Assertion Error";
+            }
+            return errorMessage;
+        },
 
         frameHeaderId(): string {
             return getFrameHeaderUID(this.frameId);
@@ -289,24 +343,25 @@ export default Vue.extend({
         },
     },
 
-    watch:{
-        runTimeErrorMessage(oldValue: string, newValue: string) {
-            // As the error message will be cleared when the frame rror is cleared, we need to keep a backup of that message when
+    watch: {
+        runTimeErrorMessage(oldValue, newValue) {
+            // As the error message will be cleared when the frame error is cleared, we need to keep a backup of that message when
             // the error message is changed from some value to none.
-            // We don't need to worry about the other changes because the error popup display logics uses other flags than the messages.
-            if(oldValue.length > 0 && newValue.length == 0) {
+            // We don't need to worry about the other changes because the error popup display logic uses other flags than the messages.
+            if (oldValue.length > 0 && newValue.length === 0) {
                 this.runtimeErrorAtLastRunMsg = oldValue;
             }
         },
 
-        isInFrameWithKeyboard(isInFrame: boolean, wasInFrame: boolean) {
-            // If we just got the text cursor, and there is/was a runtime error in the frame, we show the popup
-            if(!wasInFrame && isInFrame && (this.hasRuntimeError || this.wasLastRuntimeError)){
+        // Watching for changes in frame conditions
+        isInFrameWithKeyboard(isInFrame, wasInFrame) {
+            // If we just got the text cursor, and there is/was a runtime error in the frame, show the popup
+            if (!wasInFrame && isInFrame && (this.hasRuntimeError || this.wasLastRuntimeError)) {
                 (this.$refs.errorPopover as InstanceType<typeof BPopover>).$emit("open");
             }
 
-            // If we lost the text cursor, and there is/was a runtime error in the frame, we hide the popup
-            if(wasInFrame && !isInFrame){
+            // If we lost the text cursor, and there is/was a runtime error in the frame, hide the popup
+            if (wasInFrame && !isInFrame) {
                 (this.$refs.errorPopover as InstanceType<typeof BPopover>)?.$emit("close");
             }
         },
@@ -314,6 +369,7 @@ export default Vue.extend({
 
     mounted() {
         window.addEventListener("keydown", this.onKeyDown);
+
 
         // Observe when the context menu when the context menu is closed
         // in order to reset the enforced selection flag
@@ -353,6 +409,7 @@ export default Vue.extend({
 
     methods: {
         onKeyDown(event: KeyboardEvent) {
+            
             // Cutting/copying by shortcut is only available for a frame selection*, and if the user's code isn't being executed.
             // To prevent the command to be called on all frames, but only once (first of a selection), we check that the current frame is a first of a selection.
             // * "this.isPartOfSelection" is necessary because it is only set at the right value in a subsequent call. 
@@ -1104,5 +1161,23 @@ export default Vue.extend({
 .selectedTopBottom{
     border-top: 3px solid #000000 !important;
     border-bottom: 3px solid #000000 !important;
+}
+
+.red-border {
+    border: 2px solid red;
+    position: relative;
+    border-radius: 8px;
+    margin-top: -1px;
+}
+
+.green-border {
+    border: 2px solid green;
+    position: relative;
+    border-radius: 8px;
+    margin-top: -1px;
+}
+
+.no-border {
+
 }
 </style>

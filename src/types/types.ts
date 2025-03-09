@@ -449,6 +449,8 @@ export const FrameContainersDefinitions = {
     TestDefContainerDefinition,
 };
 
+
+
 let Definitions = {};
 
 // Entry point for generating the frame definition types -- only doing so to allow dynamic localisation bits...
@@ -752,6 +754,7 @@ export function generateAllFrameDefinitionTypes(regenerateExistingFrames?: boole
     }
 }
 
+
 // Methods to access the dynamic frame definition types
 export function getFrameDefType(key: string): FramesDefinitions{
     if(Object.values(Definitions).length == 0){
@@ -845,6 +848,7 @@ export const MessageTypes = {
     uploadEditorFileSucces: "uploadEditorFileSuccess",
     forbiddenFramePaste: "forbiddenFramePaste",
     functionFrameCantDelete: "functionFrameCantDelete",
+    testFrameCantDelete: "testFrameCantDelete",
     gdriveConnectToSaveFailed: "gdriveConnectToSaveFailed",
     gdriveCantCreateStrypeFolder:"gdriveCantCreateStrypeFolder",
     gdriveFileAlreadyExists: "gdriveFileAlreadyExists",
@@ -950,6 +954,12 @@ const FunctionFrameCantDelete: MessageDefinition = {
     message: "messageBannerMessage.functionFrameCantDelete",
 };
 
+const TestFrameCantDelete: MessageDefinition = {
+    ...NoMessage,
+    type: MessageTypes.testFrameCantDelete,
+    message: "messageBannerMessage.testFrameCantDelete",
+};
+
 const GDriveConnectToSaveFailed: MessageDefinition = {
     type: MessageTypes.gdriveConnectToSaveFailed,
     message: "messageBannerMessage.gdriveConnectToSaveFailed",
@@ -999,6 +1009,7 @@ export const MessageDefinitions = {
     UploadEditorFileSuccess,
     ForbiddenFramePaste,
     FunctionFrameCantDelete,
+    TestFrameCantDelete,
     GDriveConnectToSaveFailed,
     GDriveCantCreateStrypeFolder,
     InvalidPythonParseImport,

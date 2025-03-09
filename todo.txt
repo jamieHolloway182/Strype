@@ -1,0 +1,4 @@
+error message for runtime errors on Tests
+error message for syntax error on tests
+let tests run when error in main code and vice versa
+fix initial caret visibility 

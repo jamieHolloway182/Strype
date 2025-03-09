@@ -233,35 +233,52 @@ export default class Parser {
         return output + disabledFrameBlockFlag;
     }
 
-    public parseTests(tests: string[]): string {
+    public parseTests(): string {
         let output = "";
+
+        const frames = useStore().getFramesForParentId(0);
+        const tests = this.parseTestsOnly();
     
         if (tests.length > 0) {
             // Retrieve frames and filter out irrelevant ones
-            let frames = useStore().getFramesForParentId(0);
             const firstFrames = frames.slice().filter((frame) => 
                 frame.frameType.type != MainFramesContainerDefinition.type && 
                 frame.frameType.type != TestDefContainerDefinition.type);
+
+            const importsAndFunctions = this.parseFrames((this.startAtFrameId > -100) ?[useStore().frameObjects[this.startAtFrameId]] : firstFrames);
     
-            output += this.parseFrames((this.startAtFrameId > -100) ?[useStore().frameObjects[this.startAtFrameId]] : firstFrames);
+            output += importsAndFunctions;
     
             output += "import unittest\nclass TestFunc(unittest.TestCase):\n\t";
     
-            frames = frames.filter((frame) => frame.frameType.type == TestDefContainerDefinition.type);
+            output += tests.replace(/\n/g,"\n\t");
+
+            output += "\nunittest.main(verbosity=3)";
+
+            this.line = 0;
+            this.framePositionMap = {} as LineAndSlotPositions;
+
+            const finalFrames = frames.slice().filter((frame) => 
+                frame.frameType.type != MainFramesContainerDefinition.type);
+
+            this.parseFrames((this.startAtFrameId > -100) ?[useStore().frameObjects[this.startAtFrameId]] : finalFrames);
     
-            const testDefinitions = this.parseFrames(frames).trim().split(/(?=def )/);
-            console.log(testDefinitions);
-    
-            for (const test of testDefinitions) {
-                const functionName = test.match(/def\s+([a-zA-Z0-9_]+)/)?.[1];
-                if (functionName && tests.includes(functionName)) {
-                    output += test.replace(/\n/g, "\n\t");
+            const adder = 2;
+            const newMap = {} as LineAndSlotPositions;
+            const importsAndFunctionsLength = importsAndFunctions.split("\n").filter((line) => line != "").length;
+            for (const key in this.framePositionMap) {
+                if(importsAndFunctionsLength == 0 || parseInt(key) >= importsAndFunctionsLength){
+                    const newKey = parseInt(key) + adder;
+                    newMap[newKey] = this.framePositionMap[key];
+                }
+                else{
+                    newMap[key] = this.framePositionMap[key];
                 }
             }
 
-            output += "\nunittest.main(verbosity=3)";
+            this.framePositionMap = newMap;
         }
-    
+
         return output;
     }
 
@@ -486,11 +503,11 @@ export default class Parser {
         return this.parse(undefined, undefined, false);
     }
 
-    public getFullTestCode(tests: string[]): string {
-        return this.parseTests(tests);
+    public getFullTestCode(): string {
+        return this.parseTests();
     }
 
-    private checkIfFrameHasError(frame: FrameObject): boolean {
+    public checkIfFrameHasError(frame: FrameObject): boolean {
         return !this.ignoreCheckErrors && retrieveSlotByPredicate(Object.values(frame.labelSlotsDict).map((labelSlotDict) => labelSlotDict.slotStructures),
             (slot: FieldSlot) => ((slot as BaseSlot).error?.length??0) > 0) != undefined;
     }

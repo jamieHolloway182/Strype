@@ -7,12 +7,6 @@
                 <b-tab :title="'\uD83D\uDC22 '+$t('PEA.TurtleGraphics')" title-link-class="pea-display-tab"></b-tab>
             </b-tabs>
             <div class="flex-padding"/>
-            <TestDropdown :listItems="getTestNames()" v-model="selectedItems" />
-            <button ref="runTestsButton" @click="runTestClicked" :title="$t((isPythonTestExecuting) ? 'PEA.stop' : 'PEA.run') + ' (Ctrl+Enter)'">
-                <img v-if="!isPythonTestExecuting" src="favicon.png" class="pea-play-img">
-                <span v-else class="python-running">{{this.runTestCodeButtonIconText}}</span>
-                <span>{{this.runTestCodeButtonLabel}}</span>
-            </button>
             <button ref="runButton" @click="runClicked" :title="$t((isPythonExecuting) ? 'PEA.stop' : 'PEA.run') + ' (Ctrl+Enter)'">
                 <img v-if="!isPythonExecuting" src="favicon.png" class="pea-play-img">
                 <span v-else class="python-running">{{this.runCodeButtonIconText}}</span>
@@ -50,19 +44,15 @@
 import Vue from "vue";
 import { useStore } from "@/store/store";
 import Parser from "@/parser/parser";
-import { execPythonCode, execPythonCodeLine } from "@/helpers/execPythonCode";
+import { execPythonCode} from "@/helpers/execPythonCode";
 import { mapStores } from "pinia";
 import { checkEditorCodeErrors, computeAddFrameCommandContainerHeight, countEditorCodeErrors, CustomEventTypes, getEditorCodeErrorsHTMLElements, getFrameUID, getLabelSlotUID, hasPrecompiledCodeError, isElementEditableLabelSlotInput, isElementUIDFrameHeader, parseFrameHeaderUID, parseLabelSlotUID, resetAddFrameCommandContainerHeight, setDocumentSelection, setPythonExecAreaExpandButtonPos, setPythonExecutionAreaTabsContentMaxHeight } from "@/helpers/editor";
 import i18n from "@/i18n";
 import { PythonExecRunningState, PythonExecRunningTestState, SlotCoreInfos, SlotCursorInfos, SlotType } from "@/types/types";
-import TestDropdown from "./TestDropdown.vue";
+import { runTests } from "@/helpers/storeMethods";
 
 export default Vue.extend({
     name: "PythonExecutionArea",
-
-    components:{
-        TestDropdown,
-    },
 
     data: function() {
         return {
@@ -158,6 +148,9 @@ export default Vue.extend({
                 this.updateTurtleListeningEvents();
             });
         }
+
+        runTests(true);
+        setInterval(runTests.bind(self, false), this.appStore.testExecutionInterval);
     },
 
     computed:{
@@ -264,35 +257,6 @@ export default Vue.extend({
             }
         },
 
-        runTestClicked() {
-            // The Python code execution has a 3-ways states:
-            // - not running when nothing happens, click will trigger "running"
-            // - running when some code is running, click will trigger "running awaiting stop"
-            // - running awaiting stop will do nothing
-            switch (useStore().pythonExecRunningTestState) {
-            case PythonExecRunningTestState.NotRunning:
-                useStore().pythonExecRunningTestState = PythonExecRunningTestState.Running;
-                this.execPythonTestCode();
-                return;
-            case PythonExecRunningTestState.Running:
-                if(this.stopTurtleUIEventListeners){
-                    this.isTurtleListeningKeyEvents = false;
-                    this.isTurtleListeningMouseEvents = false;
-                    this.isTurtleListeningTimerEvents = false;
-                    this.updateTurtleListeningEvents();
-                    return;
-                }
-
-                // Case 2): Skulpt checks this property regularly while running, via a callback,
-                // so just setting the variable is enough to "request" a stop 
-                useStore().pythonExecRunningTestState = PythonExecRunningTestState.RunningAwaitingStop;
-                return;
-            case PythonExecRunningTestState.RunningAwaitingStop:
-                // Else, nothing more we can do at the moment, just waiting for Skulpt to see it
-                return;
-            }
-        },
-        
         updateTurtleListeningEvents(): void {
             // We should check if we are still in need to maintain the running state as "Running" (just for listening the events)
             // but if the state is already stopped (which can have been naturally from Skulpt then we don't need to do anything)
@@ -329,7 +293,6 @@ export default Vue.extend({
 
                 const parser = new Parser();
                 const userCode = parser.getFullCode();
-                console.log(userCode);
                 parser.getErrorsFormatted(userCode);
                 // Trigger the actual Python code execution launch
                 execPythonCode(pythonConsole, this.$refs.pythonTurtleDiv as HTMLDivElement, userCode, parser.getFramePositionMap(),() => useStore().pythonExecRunningState != PythonExecRunningState.RunningAwaitingStop, (finishedWithError: boolean, isTurtleListeningKeyEvents: boolean, isTurtleListeningMouseEvents: boolean, isTurtleListeningTimerEvents: boolean, stopTurtleListeners: VoidFunction | undefined) => {
@@ -354,107 +317,13 @@ export default Vue.extend({
                 this.checkNonePrecompiledErrors();
             }, 1000);           
         },
-
-        execPythonTestCode() {
-            const pythonConsole = this.$refs.pythonConsole as HTMLTextAreaElement;
-            pythonConsole.value = "";
-            setPythonExecAreaExpandButtonPos();
-            
-            // Make sure the text area is disabled when we run the code
-            pythonConsole.disabled = true;
-            this.appStore.wasLastRuntimeErrorFrameId = undefined;
-            // Make sure there is no document selection for our editor
-            this.appStore.setSlotTextCursors(undefined, undefined);
-                
-            // Before doing anything, we make sure there are no errors found in the code
-            // We DELAY the action to make sure every other UI actions has been done, notably the error checking from LabelSlotsStructure.
-            setTimeout(() => {
-                // In case the error happens in the current frame (empty body) we have to give the UI time to update to be able to notify changes
-                if(hasPrecompiledCodeError()) {
-                    this.$nextTick().then(() => {
-                        this.reachFirstError();   
-                        // If we have an error, the code didn't actually run so we need to reflect this properly in the running state
-                        useStore().pythonExecRunningTestState = PythonExecRunningTestState.NotRunning;            
-                    }); 
-                    return;
-                }
-
-                const parser = new Parser();
-                let userCode = parser.getFullTestCode(this.selectedItems);
-                console.log(userCode);
-
-                parser.getErrorsFormatted(userCode);
-
-
-                // Trigger the actual Python code execution launch
-                execPythonCode(pythonConsole, this.$refs.pythonTurtleDiv as HTMLDivElement, userCode, parser.getFramePositionMap(),() => useStore().pythonExecRunningTestState != PythonExecRunningTestState.RunningAwaitingStop, (finishedWithError: boolean, isTurtleListeningKeyEvents: boolean, isTurtleListeningMouseEvents: boolean, isTurtleListeningTimerEvents: boolean, stopTurtleListeners: VoidFunction | undefined) => {
-                    // After Skulpt has executed the user code, we need to check if a keyboard listener is still pending from that user code.
-                    this.isTurtleListeningKeyEvents = !!isTurtleListeningKeyEvents; 
-                    this.isTurtleListeningMouseEvents = !!isTurtleListeningMouseEvents; 
-                    this.isTurtleListeningTimerEvents = !!isTurtleListeningTimerEvents;
-                    this.stopTurtleUIEventListeners = stopTurtleListeners;
-                    if (finishedWithError) {
-                        this.updateTurtleListeningEvents();
-                    }
-                    if(!this.isTurtleListeningEvents) {
-                        useStore().pythonExecRunningTestState = PythonExecRunningTestState.NotRunning;
-                    }
-                    setPythonExecAreaExpandButtonPos();
-                    // A runtime error may happen whenever the user code failed, therefore we should check if an error
-                    // when Skulpt indicates the code execution has finished.
-                    this.checkNonePrecompiledErrors();
-                });
-                // We make sure the number of errors shown in the interface is in line with the current state of the code
-                // Note that a run time error can still occur later.                
-                this.checkNonePrecompiledErrors();
-            }, 1000);           
-        },
-
-        execPythonCodeLine(){
-
-            const pythonConsole = this.$refs.pythonConsole as HTMLTextAreaElement;
-            pythonConsole.value = "";
-            setPythonExecAreaExpandButtonPos();
-            
-            // Make sure the text area is disabled when we run the code
-            pythonConsole.disabled = true;
-            this.appStore.wasLastRuntimeErrorFrameId = undefined;
-            // Make sure there is no document selection for our editor
-            this.appStore.setSlotTextCursors(undefined, undefined);
-
-            // const parser = new Parser();
-
-            let userCode = "for a in range(10):\n\tprint(a)";
-
-            execPythonCodeLine(userCode);
-
-            // userCode = "print(a)";
-
-            // execPythonCodeLine(pythonConsole, this.$refs.pythonTurtleDiv as HTMLDivElement, userCode, parser.getFramePositionMap(),() => useStore().pythonExecRunningTestState != PythonExecRunningTestState.RunningAwaitingStop, (finishedWithError: boolean, isTurtleListeningKeyEvents: boolean, isTurtleListeningMouseEvents: boolean, isTurtleListeningTimerEvents: boolean, stopTurtleListeners: VoidFunction | undefined) => {
-            //     // After Skulpt has executed the user code, we need to check if a keyboard listener is still pending from that user code.
-            //     this.isTurtleListeningKeyEvents = !!isTurtleListeningKeyEvents; 
-            //     this.isTurtleListeningMouseEvents = !!isTurtleListeningMouseEvents; 
-            //     this.isTurtleListeningTimerEvents = !!isTurtleListeningTimerEvents;
-            //     this.stopTurtleUIEventListeners = stopTurtleListeners;
-            //     if (finishedWithError) {
-            //         this.updateTurtleListeningEvents();
-            //     }
-            //     if(!this.isTurtleListeningEvents) {
-            //         useStore().pythonExecRunningTestState = PythonExecRunningTestState.NotRunning;
-            //     }
-            //     setPythonExecAreaExpandButtonPos();
-            //     // A runtime error may happen whenever the user code failed, therefore we should check if an error
-            //     // when Skulpt indicates the code execution has finished.
-            //     this.checkNonePrecompiledErrors();
-            // });
-        },
-
+        
         getTestNames(){
-            const parser = new Parser();
-            const testCode = parser.parseTestsOnly();
-            const testNames = [...testCode.matchAll(/def\s+(\w+)\s*\(/g)].map((match) => match[1]);
+            // const parser = new Parser();
+            // const testCode = parser.parseTestsOnly();
+            // const testNames = [...testCode.matchAll(/def\s+(\w+)\s*\(/g)].map((match) => match[1]);
 
-            return testNames;
+            // return testNames;
         },
 
         checkNonePrecompiledErrors(){

@@ -27,10 +27,18 @@ initialState = initialStates["initialMicrobitState"];
 const diffToPreviousState : ObjectPropertyDiff[][] = [];
 const diffToNextState: ObjectPropertyDiff[][] = [];
 
+interface FailedTests {
+    [key: string]: string | undefined;  // Allowing string or undefined
+}
 
 export const useStore = defineStore("app", {
     state: () => {
         return {
+            failedTests: {} as FailedTests,
+
+            testExecutionInterval: 5000,
+
+            lastEditTime: Date.now(),
             /** these flags need checking when a build is done **/
             debugging: initialState.debugging,
 
@@ -163,7 +171,7 @@ export const useStore = defineStore("app", {
             DAPWrapper: {} as DAPWrapper,
 
             previousDAPWrapper: {} as DAPWrapper,
-            ztest:["hey"],
+
         };
     },
 
@@ -221,7 +229,6 @@ export const useStore = defineStore("app", {
         },
         
         getCurrentFrameObject: (state) => {
-            console.log(state.frameObjects, state.currentFrame);
             return state.frameObjects[state.currentFrame.id];
         },
         
@@ -1940,9 +1947,7 @@ export const useStore = defineStore("app", {
             //If a selection is deleted, we don't distinguish between "del" and "backspace": 
             //We move the caret at the last element of the selection, and perform "backspace" for each element of the selection
             if(this.selectedFrames.length > 0){
-                console.log("gay");
                 if(this.selectedFrames[this.selectedFrames.length-1] !== this.currentFrame.id){
-                    console.log(this.selectedFrames, "hey");
                     this.setCurrentFrame(
                         {
                             id: this.selectedFrames[this.selectedFrames.length-1], 
@@ -1998,14 +2003,20 @@ export const useStore = defineStore("app", {
                             //we just make sure the frame to delete isn't a function definition frame:
                             //we can't delete a function def frame with backspace in its body (unless empty) because it will result
                             //in its content put directly into the function defs container. So we just alert the users.
-                            if(currentFrame.childrenIds.length === 0 || currentFrame.frameType.type !== AllFrameTypesIdentifier.funcdef){
+                            if(currentFrame.childrenIds.length === 0 || 
+                                (currentFrame.frameType.type !== AllFrameTypesIdentifier.funcdef && currentFrame.frameType.type !== AllFrameTypesIdentifier.testdef)){
                                 //just move the cursor one level up
                                 this.changeCaretWithKeyboard(key);
                                 deleteWithBackspaceInBody = true;
                             }
                             else{
                                 //just show the user a message and do nothing else
-                                this.showMessage(MessageDefinitions.FunctionFrameCantDelete, 7000);
+                                if (currentFrame.frameType.type === AllFrameTypesIdentifier.funcdef){
+                                    this.showMessage(MessageDefinitions.FunctionFrameCantDelete, 7000);
+                                }
+                                else{
+                                    this.showMessage(MessageDefinitions.TestFrameCantDelete, 7000);
+                                }
                 
                                 return;
                             }
@@ -2015,7 +2026,6 @@ export const useStore = defineStore("app", {
                             // there's actually no need to change the cursor position, because we should still be below
                             // the joint frame's parent:
                             if (!currentFrame.frameType.isJointFrame || this.currentFrame.caretPosition != CaretPosition.below) {
-                                console.log("yo bbabezz");
                                 const prevFramePos = availablePositions[availablePositions.findIndex((e) => e.frameId === currentFrame.id) - 1];
                                 const newCurrent = (prevFramePos) ? {id: prevFramePos.frameId, caretPosition: prevFramePos.caretPosition} as CurrentFrame : this.currentFrame;
                                 this.setCurrentFrame({id: newCurrent.id, caretPosition: newCurrent.caretPosition});
@@ -2041,7 +2051,6 @@ export const useStore = defineStore("app", {
                         }
                     );
                 }  
-                console.log(this.currentFrame.id, this.frameObjects);
             });
 
             //clear the selection of frames

@@ -1,10 +1,11 @@
 import { getSHA1HashForObject } from "@/helpers/common";
 import i18n from "@/i18n";
+import { execPythonTestCode} from "@/helpers/execPythonCode";
 import Parser from "@/parser/parser";
 import { useStore } from "@/store/store";
-import { AllFrameTypesIdentifier, BaseSlot, CaretPosition, CurrentFrame, EditorFrameObjects, FieldSlot, FlatSlotBase, FrameObject, getFrameDefType, isFieldBracketedSlot, isFieldStringSlot, isSlotBracketType, isSlotCodeType, NavigationPosition, SlotCoreInfos, SlotCursorInfos, SlotInfos, SlotsStructure, SlotType, StrypePlatform } from "@/types/types";
+import { AllFrameTypesIdentifier, BaseSlot, CaretPosition, CurrentFrame, EditorFrameObjects, FieldSlot, FlatSlotBase, FrameObject, getFrameDefType, isFieldBracketedSlot, isFieldStringSlot, isSlotBracketType, isSlotCodeType, NavigationPosition, PythonExecRunningState, SlotCoreInfos, SlotCursorInfos, SlotInfos, SlotsStructure, SlotType, StrypePlatform } from "@/types/types";
 import Vue from "vue";
-import { checkEditorCodeErrors, countEditorCodeErrors, getLabelSlotUID, getMatchingBracket, parseLabelSlotUID } from "./editor";
+import { checkEditorCodeErrors, countEditorCodeErrors, getLabelSlotUID, getMatchingBracket, parseLabelSlotUID, hasPrecompiledCodeError } from "./editor";
 import { nextTick } from "@vue/composition-api";
 
 export const retrieveSlotFromSlotInfos = (slotCoreInfos: SlotCoreInfos): FieldSlot => {
@@ -869,7 +870,39 @@ export function checkCodeErrors(frameIdForPrecompiled?: number): void {
     nextTick().then(() => {
         checkEditorCodeErrors();
         useStore().errorCount = countEditorCodeErrors();
+        useStore().lastEditTime = Date.now();
     }); 
+}
+
+export function runTests(forceRun: boolean): void{
+
+    setTimeout(() => {
+
+        if ((Date.now() - useStore().lastEditTime < useStore().testExecutionInterval && useStore().pythonExecRunningState == PythonExecRunningState.NotRunning)
+        || forceRun){
+        
+            const parser = new Parser();
+            const userCode = parser.getFullTestCode();
+
+            if(hasPrecompiledCodeError()) {
+                console.log("fail");
+                Object.keys(useStore().failedTests).forEach((key) => {
+                    useStore().failedTests[key] = "Test bruv";
+                });
+                return;
+            }
+            if (useStore().isEditing){
+                return;
+            }
+
+            // Trigger the actual Python code execution launch
+            nextTick().then(() => {
+                console.log(userCode);
+                execPythonTestCode(userCode, parser.getFramePositionMap());
+            });
+        }
+
+    }, 1000);
 }
 
 export function getAllEnabledUserDefinedFunctions() : FrameObject[] {

@@ -476,7 +476,6 @@ export function getEditorCodeErrorsHTMLElements(): HTMLElement[] {
         // If we never checked errors, we do it at this stage
         checkEditorCodeErrors();
     }
-
     return (errorHTMLElements as HTMLElement[]);
 }
 
